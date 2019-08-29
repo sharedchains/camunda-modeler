@@ -24,3 +24,6 @@
 .app-icon-properties:before { content: '\f3c2'; } /* '' */
 .app-icon-save:before { content: '\f422'; } /* '' */
 .app-icon-save-as:before { content: '\f423'; } /* '' */
+
+.app-icon-multidiagram-new:before { content: '\ff0b';}
+.app-icon-multidiagram-delete:before { content: '\ff0d';}

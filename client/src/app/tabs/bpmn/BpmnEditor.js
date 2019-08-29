@@ -10,7 +10,7 @@
 
 import React, { Component } from 'react';
 
-import { isFunction } from 'min-dash';
+import { isFunction, findIndex } from 'min-dash';
 
 import { Fill } from '../../slot-fill';
 
@@ -330,9 +330,16 @@ export class BpmnEditor extends CachedComponent {
         defaultTemplatesApplied = true;
       }
 
+      let definitions = modeler.getDefinitions();
+      let diagram = null;
+      if (!!definitions) {
+        diagram = definitions.diagrams[0];
+      }
+
       this.setCached({
         defaultTemplatesApplied,
         lastXML: xml,
+        activeDiagram: diagram.id,
         stackIdx
       });
 
@@ -656,6 +663,106 @@ export class BpmnEditor extends CachedComponent {
     eventBus.fire('propertiesPanel.resized');
   }
 
+  getDiagrams = () => {
+    const modeler = this.getModeler();
+    let definitions = modeler.getDefinitions();
+    if (!!definitions) {
+      return definitions.diagrams.map((diagram, index) => {
+        const { id } = diagram;
+
+        return (
+          <Diagram
+            id={ id }
+            key={ index }
+            onClick={ () => {
+              this.setCached({
+                activeDiagram: id
+              });
+              modeler.open(id);
+            } }
+            className="item"
+            />
+        );
+      });
+    }
+    return [];
+  }
+
+  isSingleDiagram = () => {
+    const modeler = this.getModeler();
+    let definitions = modeler.getDefinitions();
+    if (!!definitions) {
+      return definitions.diagrams.length === 1;
+    }
+    return true;
+  }
+
+  addDiagram = () => {
+    const modeler = this.getModeler();
+    let definitions = modeler.getDefinitions();
+    modeler.clear();
+    const bpmnFactory = modeler.get('bpmnFactory');
+    let diagramIndex = (definitions.diagrams.length + 1);
+    let rootElementIndex = (definitions.rootElements.length + 1);
+    let diagramId = 'BPMNDiagram_' + diagramIndex;
+    let rootElementId = 'Process_' + rootElementIndex;
+    let plainId = 'BPMNPlane_' + rootElementIndex;
+    let newRootElement = bpmnFactory.create('bpmn:Process', {
+      id: rootElementId,
+      isExecutable: true
+    });
+
+    let newDiagram = bpmnFactory.create('bpmndi:BPMNDiagram', {
+      id: diagramId,
+    });
+
+    let bpmnPlane = bpmnFactory.create('bpmndi:BPMNPlane', {
+      id: plainId,
+      bpmnElement: newRootElement
+    });
+    bpmnPlane.$parent = newDiagram;
+    newDiagram.plane = bpmnPlane;
+
+    definitions.diagrams.push(newDiagram);
+    definitions.rootElements.push(newRootElement);
+    modeler._setDefinitions(definitions);
+
+    this.handleChanged();
+    this.setCached({
+      activeDiagram: diagramId
+    });
+    modeler.open(diagramId);
+  }
+
+  deleteDiagram = () => {
+    const modeler = this.getModeler();
+    let definitions = modeler.getDefinitions();
+
+    const {
+      activeDiagram
+    } = this.getCached();
+
+    if (definitions.diagrams.length > 1) {
+      let diagramIndex = findIndex(definitions.diagrams, d => d.id === activeDiagram);
+      let diagram = definitions.diagrams.splice(diagramIndex, 1);
+
+      if (!!diagram) {
+        let rootElementId = diagram[0].plane.bpmnElement.id;
+
+        let rootElementIndex = findIndex(definitions.rootElements, r => r.id === rootElementId);
+        definitions.rootElements.splice(rootElementIndex, 1);
+        modeler._setDefinitions(definitions);
+
+        this.handleChanged();
+        let lastDiagram = definitions.diagrams[definitions.diagrams.length-1];
+        this.setCached({
+          activeDiagram: lastDiagram.id
+        });
+        modeler.open(lastDiagram.id);
+      }
+    }
+  }
+
   render() {
 
     const {
@@ -765,6 +872,28 @@ export class BpmnEditor extends CachedComponent {
           </Button>
         </Fill>
 
+        <Fill name="toolbar" group="multidiagram">
+          <Button
+            onClick={ () => this.addDiagram() }
+            title="New Diagram"
+          >
+            <Icon name="multidiagram-new" />
+          </Button>
+          <Button
+            onClick={ () => this.deleteDiagram() }
+            disabled={ this.isSingleDiagram() }
+            title="Delete Diagram"
+          >
+            <Icon name="multidiagram-delete" />
+          </Button>
+          <DropdownButton
+            title="Switch diagram"
+            items={ this.getDiagrams }
+            >
+              <Icon name="new" />
+            </DropdownButton>
+        </Fill>
+
         <div
           className="diagram"
           ref={ this.ref }
@@ -825,6 +954,7 @@ export class BpmnEditor extends CachedComponent {
         modeler.destroy();
       },
       lastXML: null,
+      activeDiagram: null,
       modeler,
       namespaceDialogShown: false,
       stackIdx,
@@ -858,6 +988,14 @@ class Color extends Component {
         title={ title }
         { ...rest }></div>
     );
+  }
+}
+
+class Diagram extends Component {
+  render() {
+    const { id, onClick, className } = this.props;
+
+    return (<div onClick={ onClick } id={ id } className={ className }>&nbsp;{ id }&nbsp;</div>);
   }
 }
 
