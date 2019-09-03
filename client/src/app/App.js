@@ -35,7 +35,10 @@ import Toolbar from './Toolbar';
 import Log from './Log';
 
 
-import { ModalConductor } from './modals';
+import {
+  DeployDiagramModal,
+  KeyboardShortcutsModal
+} from './modals';
 
 import {
   Button,
@@ -983,14 +986,14 @@ export class App extends PureComponent {
   /**
    * Propagates errors to parent.
    * @param {Error} error
-   * @param {Tab} [tab]
+   * @param {Tab|string} [categoryOrTab]
    */
-  handleError = (error, tab) => {
+  handleError = (error, categoryOrTab) => {
     const {
       onError
     } = this.props;
 
-    return onError(error, tab);
+    return onError(error, categoryOrTab);
   }
 
   getGlobal = (name) => {
@@ -1008,14 +1011,14 @@ export class App extends PureComponent {
   /**
    * Propagates warnings to parent.
    * @param {Error} error
-   * @param {Tab} [tab]
+   * @param {Tab|string} [categoryOrTab]
    */
-  handleWarning(warning, tab) {
+  handleWarning(warning, categoryOrTab) {
     const {
       onWarning
     } = this.props;
 
-    return onWarning(warning, tab);
+    return onWarning(warning, categoryOrTab);
   }
 
   /**
@@ -1764,17 +1767,22 @@ export class App extends PureComponent {
             />
           </SlotFillRoot>
 
-          <ModalConductor
-            currentModal={ this.state.currentModal }
-            endpoints={ this.state.endpoints }
-            tab={ activeTab }
-            getGlobal={ this.getGlobal }
-            onClose={ this.closeModal }
-            onDeploy={ this.handleDeploy }
-            onDeployError={ this.handleDeployError }
-            onEndpointsUpdate={ this.setEndpoints }
-            onMenuUpdate={ this.updateMenu }
-          />
+          { this.state.currentModal === 'DEPLOY_DIAGRAM' ?
+            <DeployDiagramModal
+              endpoints={ this.state.endpoints }
+              tab={ activeTab }
+              onClose={ this.closeModal }
+              onDeploy={ this.handleDeploy }
+              onDeployError={ this.handleDeployError }
+              onEndpointsUpdate={ this.setEndpoints }
+              onMenuUpdate={ this.updateMenu }
+            /> : null }
+
+          { this.state.currentModal === 'KEYBOARD_SHORTCUTS' ?
+            <KeyboardShortcutsModal
+              getGlobal={ this.getGlobal }
+              onClose={ this.closeModal }
+            /> : null }
 
         </div>
 
