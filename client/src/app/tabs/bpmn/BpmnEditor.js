@@ -131,6 +131,9 @@ export class BpmnEditor extends CachedComponent {
 
     propertiesPanel.attachTo(this.propertiesPanelRef.current);
 
+    const multiDiagram = modeler.get('diagramSwitch');
+    multiDiagram.setAttached(true);
+
 
     if (this.shouldLoadTemplates()) {
       try {
@@ -198,6 +201,8 @@ export class BpmnEditor extends CachedComponent {
     modeler[fn]('error', 1500, this.handleError);
 
     modeler[fn]('minimap.toggle', this.handleMinimapToggle);
+
+    modeler[fn]('commandStack.diagram.switch', this.handleSwitch)
   }
 
   shouldLoadTemplates() {
@@ -615,6 +620,10 @@ export class BpmnEditor extends CachedComponent {
       };
     }
 
+    if (action === 'diagram-rename') {
+      return this.handleRenameDiagram(context.newName);
+    }
+
     // TODO(nikku): handle all editor actions
     modeler.get('editorActions').trigger(action, context);
   }
@@ -666,6 +675,7 @@ export class BpmnEditor extends CachedComponent {
   getDiagrams = () => {
     const modeler = this.getModeler();
     let definitions = modeler.getDefinitions();
+    const commandStack = modeler.get('commandStack');
     if (!!definitions) {
       return definitions.diagrams.map((diagram, index) => {
         const { id } = diagram;
@@ -675,10 +685,7 @@ export class BpmnEditor extends CachedComponent {
             id={ id }
             key={ index }
             onClick={ () => {
-              this.setCached({
-                activeDiagram: id
-              });
-              modeler.open(id);
+              commandStack.execute('diagram.switch', { id: id});
             } }
             className="item"
             />
@@ -699,68 +706,32 @@ export class BpmnEditor extends CachedComponent {
 
   addDiagram = () => {
     const modeler = this.getModeler();
-    let definitions = modeler.getDefinitions();
-    modeler.clear();
-    const bpmnFactory = modeler.get('bpmnFactory');
-    let diagramIndex = (definitions.diagrams.length + 1);
-    let rootElementIndex = (definitions.rootElements.length + 1);
-    let diagramId = 'BPMNDiagram_' + diagramIndex;
-    let rootElementId = 'Process_' + rootElementIndex;
-    let plainId = 'BPMNPlane_' + rootElementIndex;
-    let newRootElement = bpmnFactory.create('bpmn:Process', {
-      id: rootElementId,
-      isExecutable: true
-    });
-
-    let newDiagram = bpmnFactory.create('bpmndi:BPMNDiagram', {
-      id: diagramId,
-    });
-
-    let bpmnPlane = bpmnFactory.create('bpmndi:BPMNPlane', {
-      id: plainId,
-      bpmnElement: newRootElement
-    });
-    bpmnPlane.$parent = newDiagram;
-    newDiagram.plane = bpmnPlane;
-
-    definitions.diagrams.push(newDiagram);
-    definitions.rootElements.push(newRootElement);
-    modeler._setDefinitions(definitions);
-
-    this.handleChanged();
-    this.setCached({
-      activeDiagram: diagramId
-    });
-    modeler.open(diagramId);
+    const commandStack = modeler.get('commandStack');
+    commandStack.execute('diagram.create', {});
   }
 
   deleteDiagram = () => {
     const modeler = this.getModeler();
     let definitions = modeler.getDefinitions();
 
-    const {
-      activeDiagram
-    } = this.getCached();
-
     if (definitions.diagrams.length > 1) {
-      let diagramIndex = findIndex(definitions.diagrams, d => d.id === activeDiagram);
-      let diagram = definitions.diagrams.splice(diagramIndex, 1);
-
-      if (!!diagram) {
-        let rootElementId = diagram[0].plane.bpmnElement.id;
-
-        let rootElementIndex = findIndex(definitions.rootElements, r => r.id === rootElementId);
-        definitions.rootElements.splice(rootElementIndex, 1);
-        modeler._setDefinitions(definitions);
-
-        this.handleChanged();
-        let lastDiagram = definitions.diagrams[definitions.diagrams.length-1];
-        this.setCached({
-          activeDiagram: lastDiagram.id
-        });
-        modeler.open(lastDiagram.id);
-      }
+      const commandStack = modeler.get('commandStack');
+      commandStack.execute('diagram.delete', {});
     }
+  }
+
+  handleRenameDiagram = (newName) => {
+    const modeler = this.getModeler();
+    const commandStack = modeler.get('commandStack');
+    commandStack.execute('diagram.rename', { newName: newName });
+  }
+
+  handleSwitch = () => {
+    const modeler = this.getModeler();
+    const diagramUtil = modeler.get('diagramUtil');
+    this.setCached({
+      activeDiagram: diagramUtil.currentDiagram()
+    });
   }
 
   render() {
@@ -886,6 +857,12 @@ export class BpmnEditor extends CachedComponent {
           >
             <Icon name="multidiagram-delete" />
           </Button>
+          <Button
+            onClick={ this.props.onModal.bind(null, 'RENAME_DIAGRAM') }
+            title="Rename diagram"
+          >
+            <Icon name="multidiagram-rename" />
+          </Button>
           <DropdownButton
             title="Switch diagram"
             items={ this.getDiagrams }
@@ -998,6 +975,7 @@ class Diagram extends Component {
     return (<div onClick={ onClick } id={ id } className={ className }>&nbsp;{ id }&nbsp;</div>);
   }
 }
+
 
 // helpers //////////
 

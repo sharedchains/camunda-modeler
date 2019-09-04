@@ -37,7 +37,8 @@ import Log from './Log';
 
 import {
   DeployDiagramModal,
-  KeyboardShortcutsModal
+  KeyboardShortcutsModal,
+  RenameDiagramModal
 } from './modals';
 
 import {
@@ -1540,6 +1541,11 @@ export class App extends PureComponent {
     this.logEntry(`Deploy error: ${JSON.stringify(error)}`, 'deploy-error');
   }
 
+  handleRenameDiagram = (newName) => {
+    this.triggerAction('diagram-rename', { newName: newName });
+    this.triggerAction('close-modal');
+  }
+
   handleCloseTab = (tab) => {
     this.triggerAction('close-tab', { tabId: tab.id }).catch(console.error);
   }
@@ -1783,6 +1789,12 @@ export class App extends PureComponent {
               getGlobal={ this.getGlobal }
               onClose={ this.closeModal }
             /> : null }
+
+          { this.state.currentModal === 'RENAME_DIAGRAM' ?
+            <RenameDiagramModal
+              onClose={ this.closeModal }
+              onRename={ this.handleRenameDiagram }
+              /> : null }
 
         </div>
 

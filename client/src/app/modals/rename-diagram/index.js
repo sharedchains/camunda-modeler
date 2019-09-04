@@ -8,6 +8,4 @@
  * except in compliance with the MIT License.
  */
 
-export { DeployDiagramModal } from './deploy-diagram';
-export { KeyboardShortcutsModal } from './keyboard-shortcuts';
-export { RenameDiagramModal } from './rename-diagram';
+export { default as RenameDiagramModal } from './RenameDiagramModal';
