@@ -131,10 +131,6 @@ export class BpmnEditor extends CachedComponent {
 
     propertiesPanel.attachTo(this.propertiesPanelRef.current);
 
-    const multiDiagram = modeler.get('diagramSwitch');
-    multiDiagram.setAttached(true);
-
-
     if (this.shouldLoadTemplates()) {
       try {
         await this.loadTemplates();
