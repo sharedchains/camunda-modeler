@@ -21,19 +21,6 @@ import { Modal } from '..';
 
 
 describe('<Modal>', function() {
-  const modalRoot = document.createElement('div');
-  modalRoot.id = 'modal-root';
-
-
-  beforeEach(() => {
-    document.body.appendChild(modalRoot);
-  });
-
-
-  afterEach(() => {
-    document.body.removeChild(modalRoot);
-  });
-
 
   it('should render', function() {
     shallow(<Modal />);
@@ -53,35 +40,73 @@ describe('<Modal>', function() {
   });
 
 
-  it('should invoke passed onClose prop for background click', function() {
+  describe('onClose handling', function() {
 
-    // given
-    const onCloseSpy = sinon.spy();
-    const wrapper = mount(<Modal onClose={ onCloseSpy } />);
+    let wrapper, onCloseSpy;
 
-    // when
-    wrapper.first().simulate('click');
+    beforeEach(function() {
+      onCloseSpy = sinon.spy();
+    });
 
-    // then
-    expect(onCloseSpy).to.be.called;
 
-    wrapper.unmount();
+    afterEach(function() {
+      if (wrapper) {
+        wrapper.unmount();
+      }
+    });
+
+
+    it('should invoke passed onClose prop for background click', function() {
+
+      // given
+      wrapper = mount(<Modal onClose={ onCloseSpy } />);
+
+      // when
+      wrapper.first().simulate('click');
+
+      // then
+      expect(onCloseSpy).to.be.called;
+    });
+
+
+    it('should NOT invoke passed onClose prop for click on modal container', function() {
+
+      // given
+      wrapper = mount(<Modal onClose={ onCloseSpy }><button id="button" /></Modal>);
+
+      // when
+      wrapper.find('#button').simulate('click');
+
+      // then
+      expect(onCloseSpy).to.not.be.called;
+    });
+
   });
 
 
-  it('should NOT invoke passed onClose prop for click on modal container', function() {
+  describe('focus handling', function() {
 
-    // given
-    const onCloseSpy = sinon.spy();
-    const wrapper = mount(<Modal onClose={ onCloseSpy } />);
+    let wrapper;
 
-    // when
-    wrapper.find('div div').first().simulate('click');
+    afterEach(function() {
+      if (wrapper) {
+        wrapper.unmount();
+      }
+    });
 
-    // then
-    expect(onCloseSpy).to.not.be.called;
 
-    wrapper.unmount();
+    it('should correctly handle autofocus', function() {
+
+      // given
+      wrapper = mount(<Modal><input id="input" autoFocus /></Modal>);
+
+      const input = wrapper.find('#input').getDOMNode();
+
+      // then
+      expect(document.activeElement).to.eql(input);
+
+    });
+
   });
 
 });
