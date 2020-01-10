@@ -8,8 +8,12 @@
  * except in compliance with the MIT License.
  */
 
-import DeploymentTool from './deployment-tool';
+import CamundaPlugin from './camunda-plugin';
+import PrivacyPreferences from './privacy-preferences';
+import UpdateChecks from './update-checks';
 
 export default [
-  DeploymentTool
+  CamundaPlugin,
+  PrivacyPreferences,
+  UpdateChecks
 ];

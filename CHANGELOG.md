@@ -6,6 +6,97 @@ All notable changes to the [Camunda Modeler](https://github.com/camunda/camunda-
 
 ___Note:__ Yet to be released changes appear here._
 
+## 3.5.0
+
+#### General
+
+* `FEAT`: remember authentication details ([`eb35b078`](https://github.com/camunda/camunda-modeler/commit/eb35b07872b7a77936399532c99a7f485b99b012))
+* `FEAT`: notarize MacOS distribution ([#1585](https://github.com/camunda/camunda-modeler/pull/1585))
+* `FEAT`: trap focus and escape key in modal ([`4df45940`](https://github.com/camunda/camunda-modeler/commit/4df459409b893cc72e1287a04234511331e3adfe))
+* `FEAT`: allow nodeIntegration to be enabled via feature toggle ([`c7f93c05`](https://github.com/camunda/camunda-modeler/commit/c7f93c05ad99dc400b2a259f88e0ad96de641aed))
+* `FIX`: do not scroll clear/close controls ([`20b8dbfc`](https://github.com/camunda/camunda-modeler/commit/20b8dbfc2874238e7b5edc7256f63e3ad3282d9a))
+* `CHORE`: prefix log messages with level ([`c741c41e`](https://github.com/camunda/camunda-modeler/commit/c741c41e3bbcfcf1176a783a9372006d16dcb688))
+* `CHORE`: bump to `diagram-js@6.0.4`
+* `CHORE`: bump to `bpmn-js@6.0.2`
+* `CHORE`: bump to `dmn-js@7.2.1`
+
+#### BPMN
+
+* `FEAT`: connecting and re-connecting shapes is now possible in both directions ([#1230](https://github.com/bpmn-io/bpmn-js/pull/1230))
+* `FIX`: render colored BPMN groups ([#1246](https://github.com/bpmn-io/bpmn-js/pull/1246))
+
+### Breaking Changes
+
+* `FEAT`: disable collapsing sub process ([`a2c008d0`](https://github.com/camunda/camunda-modeler/commit/a2c008d09effe200c857ec36a20889ae4dde598a))
+
+#### DMN
+
+* `FEAT(decision-table)`: preserve aggregation when COLLECT is selected again
+* `FEAT(decision-table)`: allow aggreation to be cleared from dropdown ([#370](https://github.com/bpmn-io/dmn-js/issues/370), [#389](https://github.com/bpmn-io/dmn-js/issues/389))
+* `FEAT(decision-table)`: use JUEL as the default input expression language ([#405](https://github.com/bpmn-io/dmn-js/issues/405))
+* `FIX(decision-table)`: correctly handle value erasing ([#826](https://github.com/camunda/camunda-modeler/issues/826))
+* `FIX(decision-table)`: correctly display simple mode edit control when cell selection changes ([#341](https://github.com/bpmn-io/dmn-js/issues/341))
+* `FIX(decision-table)`: do not close input on user selection ([#421](https://github.com/bpmn-io/dmn-js/issues/421))
+* `FIX(decision-table)`: do not navigate when clearing pre-defined hints ([#431](https://github.com/bpmn-io/dmn-js/issues/431))
+* `FIX(decision-table)`: prevent context menu jump in larger tables
+* `FIX(decision-table)`: do not close context on user selection
+
+### Breaking Changes
+
+* `FEAT(decision-table)`: only allow standardized hit policy values
+
+## 3.4.1
+
+* `FIX`: allow again to scroll DMN tables horizontally ([#1537](https://github.com/camunda/camunda-modeler/issues/1537))
+
+## 3.4.0
+
+#### General
+
+* `FEAT`: add reusable notifications mechanism ([#1505](https://github.com/camunda/camunda-modeler/issues/1505))
+* `FEAT`: allow access to workspace configurations for plugins and files ([#1425](https://github.com/camunda/camunda-modeler/issues/1425))
+* `FIX`: complete direct editing on save operation ([#1473](https://github.com/camunda/camunda-modeler/issues/1473))
+* `FIX`: correct autofocusing in modals ([#1489](https://github.com/camunda/camunda-modeler/pull/1489))
+* `CHORE`: bump to `bpmn-js@5.1.0` / `diagram-js@5.1.0`
+
+#### BPMN
+
+* `FIX`: correct duplicated references in lanes ([#1504](https://github.com/camunda/camunda-modeler/issues/1504))
+* `FIX`: keep sequence flow conditions after morphing source or target ([#180](https://github.com/camunda/camunda-modeler/issues/180))
+* `FIX`: do not show preview if create operation is not allowed ([#1481](https://github.com/camunda/camunda-modeler/issues/1481))
+* `FIX`: be able to paste elements on previously removed areas ([#1466](https://github.com/camunda/camunda-modeler/issues/1466))
+
+#### Deployment
+
+* `FEAT`: remember deployment details with diagram ([#1066](https://github.com/camunda/camunda-modeler/issues/1066))     
+* `FEAT`: display readable error message in log ([#1426](https://github.com/camunda/camunda-modeler/issues/1426))        
+* `FEAT`: derive default deployment name from the filename ([#1511](https://github.com/camunda/camunda-modeler/pull/1511))   
+* `FEAT`: deployment tool as a client extension ([#1488](https://github.com/camunda/camunda-modeler/issues/1488))  
+
+#### Plugins
+
+* `FEAT`: add extension point for UI plugins ([#1490](https://github.com/camunda/camunda-modeler/issues/1490))
+* Introduce several application events to hook into:
+    * <tab.saved> ([#1498](https://github.com/camunda/camunda-modeler/pull/1498))
+    * <tab.activeSheetChanged> ([`403afc`](https://github.com/camunda/camunda-modeler/commit/403afc920cf6c745816c3cd456baeb99830b25ed))
+    * <app.activeTabChanged> ([`403afc`](https://github.com/camunda/camunda-modeler/commit/403afc920cf6c745816c3cd456baeb99830b25ed))
+    * <bpmn.modeler.configure> ([#1499](https://github.com/camunda/camunda-modeler/issues/1499))
+    * <bpmn.modeler.created> ([#1500](https://github.com/camunda/camunda-modeler/issues/1500))
+
+## 3.3.5
+
+* `FIX`: snap connections to shape center ([#1436](https://github.com/camunda/camunda-modeler/issues/1436))
+* `FIX`: apply labels when using context pad ([#1502](https://github.com/camunda/camunda-modeler/issues/1502))
+* `FIX`: do not copy extension elements with unknown type ([#1507](https://github.com/camunda/camunda-modeler/issues/1507))  
+
+## 3.3.4
+
+* `FIX`: correct menu point visibility ([#1487](https://github.com/camunda/camunda-modeler/issues/1487))
+
+## 3.3.3
+
+* `FIX`: correct check whether plug-ins are enabled ([#1479](https://github.com/camunda/camunda-modeler/issues/1479))
+
 ## 3.3.2
 
 * `FIX`: correct connection layout when dropping on sequence flows
@@ -61,6 +152,7 @@ ___Note:__ Yet to be released changes appear here._
 #### General
 
 * `FIX`: update properties panels to mitigate HTML injection vulnerabilities ([`1ed7caa2c`](https://github.com/camunda/camunda-modeler/commit/1ed7caa2ce3fe1a66b4b5786afbd63c1e54b9700), [blog post](https://bpmn.io/blog/posts/2019-html-injection-vulnerabilities-properties-panels-fixed.html))
+* `CHORE`: validate that XML IDs for imported documents are valid [QNames](https://www.w3.org/2001/tag/doc/qnameids) 
 
 #### BPMN
 

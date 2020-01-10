@@ -15,6 +15,10 @@ import React from 'react';
 import { mount } from 'enzyme';
 
 import {
+  find
+} from 'min-dash';
+
+import {
   Cache,
   WithCachedState
 } from '../../../cached';
@@ -179,7 +183,8 @@ describe('<BpmnEditor>', function() {
 
           return [];
         },
-        onError: onErrorSpy
+        onError: onErrorSpy,
+        onAction: noop
       };
 
       // then
@@ -560,7 +565,6 @@ describe('<BpmnEditor>', function() {
     });
 
   });
-
 
 
   describe('#handleNamespace', function() {
@@ -944,7 +948,7 @@ describe('<BpmnEditor>', function() {
     it('should load templates when mounted', async function() {
 
       // given
-      const onLoadConfigSpy = sinon.spy(),
+      const getConfigSpy = sinon.spy(),
             elementTemplatesLoaderMock = { setTemplates() {} };
 
       const cache = new Cache();
@@ -962,19 +966,19 @@ describe('<BpmnEditor>', function() {
       // when
       await renderEditor(diagramXML, {
         cache,
-        onLoadConfig: onLoadConfigSpy
+        getConfig: getConfigSpy
       });
 
       // expect
-      expect(onLoadConfigSpy).to.be.called;
-      expect(onLoadConfigSpy).to.be.calledWith('bpmn.elementTemplates');
+      expect(getConfigSpy).to.be.called;
+      expect(getConfigSpy).to.be.calledWith('bpmn.elementTemplates');
     });
 
 
     it('should not reload templates if it once succeeded', async function() {
 
       // given
-      const onLoadConfigSpy = sinon.spy(),
+      const getConfigSpy = sinon.spy(),
             elementTemplatesLoaderStub = sinon.stub({ setTemplates() {} });
 
       const cache = new Cache();
@@ -992,15 +996,15 @@ describe('<BpmnEditor>', function() {
       // when
       const { instance } = await renderEditor(diagramXML, {
         cache,
-        onLoadConfig: onLoadConfigSpy
+        getConfig: getConfigSpy
       });
 
       instance.componentWillUnmount();
       await instance.componentDidMount();
 
       // expect
-      expect(onLoadConfigSpy).to.be.calledOnce;
-      expect(onLoadConfigSpy).to.be.calledWith('bpmn.elementTemplates');
+      expect(getConfigSpy).to.be.calledOnce;
+      expect(getConfigSpy).to.be.calledWith('bpmn.elementTemplates');
       expect(elementTemplatesLoaderStub.setTemplates).to.be.calledOnce;
     });
 
@@ -1008,10 +1012,10 @@ describe('<BpmnEditor>', function() {
     it('should retry loading templates on mount if they could not be loaded', async function() {
 
       // given
-      const onLoadConfigStub = sinon.stub(),
+      const getConfigStub = sinon.stub(),
             elementTemplatesLoaderStub = sinon.stub({ setTemplates() {} });
 
-      onLoadConfigStub.onFirstCall()
+      getConfigStub.onFirstCall()
         .rejects()
         .onSecondCall()
         .resolves();
@@ -1031,15 +1035,15 @@ describe('<BpmnEditor>', function() {
       // when
       const { instance } = await renderEditor(diagramXML, {
         cache,
-        onLoadConfig: onLoadConfigStub
+        getConfig: getConfigStub
       });
 
       instance.componentWillUnmount();
       await instance.componentDidMount();
 
       // expect
-      expect(onLoadConfigStub).to.be.calledTwice;
-      expect(onLoadConfigStub).to.be.calledWith('bpmn.elementTemplates');
+      expect(getConfigStub).to.be.calledTwice;
+      expect(getConfigStub).to.be.calledWith('bpmn.elementTemplates');
       expect(elementTemplatesLoaderStub.setTemplates).to.be.calledOnce;
     });
 
@@ -1047,7 +1051,7 @@ describe('<BpmnEditor>', function() {
     it('should retry loading templates on mount if they could not be set', async function() {
 
       // given
-      const onLoadConfigSpy = sinon.spy(),
+      const getConfigSpy = sinon.spy(),
             elementTemplatesLoaderStub = sinon.stub({ setTemplates() {} });
 
       elementTemplatesLoaderStub.setTemplates.onFirstCall()
@@ -1070,15 +1074,15 @@ describe('<BpmnEditor>', function() {
       // when
       const { instance } = await renderEditor(diagramXML, {
         cache,
-        onLoadConfig: onLoadConfigSpy
+        getConfig: getConfigSpy
       });
 
       instance.componentWillUnmount();
       await instance.componentDidMount();
 
       // expect
-      expect(onLoadConfigSpy).to.be.calledTwice;
-      expect(onLoadConfigSpy).to.be.calledWith('bpmn.elementTemplates');
+      expect(getConfigSpy).to.be.calledTwice;
+      expect(getConfigSpy).to.be.calledWith('bpmn.elementTemplates');
       expect(elementTemplatesLoaderStub.setTemplates).to.be.calledTwice;
     });
 
@@ -1394,6 +1398,62 @@ describe('<BpmnEditor>', function() {
 
   });
 
+
+  describe('extensions event emitting', function() {
+
+    let recordActions, emittedEvents;
+
+    beforeEach(function() {
+      emittedEvents = [];
+
+      recordActions = (action, options) => {
+        emittedEvents.push(options);
+      };
+    });
+
+    it('should notify when modeler configures', async function() {
+
+      // when
+      await renderEditor(diagramXML, {
+        onAction: recordActions
+      });
+
+      // then
+      const modelerConfigureEvent = getEvent(emittedEvents, 'bpmn.modeler.configure');
+
+      const {
+        payload
+      } = modelerConfigureEvent;
+
+      expect(modelerConfigureEvent).to.exist;
+      expect(payload.middlewares).to.exist;
+    });
+
+
+    it('should notify when modeler was created', async function() {
+
+      // when
+      const {
+        instance
+      } = await renderEditor(diagramXML, {
+        onAction: recordActions
+      });
+
+      // then
+      const modeler = instance.getModeler();
+
+      const modelerCreatedEvent = getEvent(emittedEvents, 'bpmn.modeler.created');
+
+      const {
+        payload
+      } = modelerCreatedEvent;
+
+      expect(modelerCreatedEvent).to.exist;
+      expect(payload.modeler).to.eql(modeler);
+    });
+
+  });
+
 });
 
 
@@ -1414,7 +1474,7 @@ async function renderEditor(xml, options = {}) {
     onImport,
     onLayoutChanged,
     onModal,
-    onLoadConfig,
+    getConfig,
     getPlugins,
     isNew
   } = options;
@@ -1432,7 +1492,7 @@ async function renderEditor(xml, options = {}) {
       onLayoutChanged={ onLayoutChanged || noop }
       onContentUpdated={ onContentUpdated || noop }
       onModal={ onModal || noop }
-      onLoadConfig={ onLoadConfig || noop }
+      getConfig={ getConfig || noop }
       getPlugins={ getPlugins || (() => []) }
       cache={ options.cache || new Cache() }
       layout={ layout || {
@@ -1452,4 +1512,9 @@ async function renderEditor(xml, options = {}) {
     instance,
     wrapper
   };
+}
+
+// helper /////////
+function getEvent(events, eventName) {
+  return find(events, e => e.type === eventName);
 }

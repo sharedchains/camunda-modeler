@@ -8,65 +8,92 @@
  * except in compliance with the MIT License.
  */
 
-import * as ReactExports from 'react';
+import debug from 'debug';
 
-import React from 'react';
+import React, { PureComponent } from 'react';
 
 import PluginParent from './PluginParent';
 
-import {
-  Modal
-} from '../primitives';
-
-import { Fill } from '../slot-fill';
+const log = debug('app:plugins');
 
 
-// bind React and components to window before the plugins are loaded
-window.react = ReactExports;
+export default class PluginsRoot extends PureComponent {
 
-window.react.React = React;
+  constructor(props) {
 
-window.components = {
-  Fill,
-  Modal
-};
-
-export default function PluginsRoot(props) {
-
-  const {
-    app,
-    plugins
-  } = props;
-
-  return plugins.map((plugin, index) => {
+    super(props);
 
     const {
-      component: PluginComponent,
-      props: customProps,
-      name
-    } = plugin;
+      app,
+      plugins
+    } = props;
+
+    this.config = app.getGlobal('config');
+
+    // this is non-reactive, by design
+    this.pluginsAndSubscribers = plugins.map(plugin => {
+
+      const subscriber = createSubscriber(app);
+      const name = plugin.displayName || plugin.name;
+
+      return {
+        name,
+        plugin,
+        subscriber
+      };
+    });
+
+  }
+
+  log = options => this.props.app.triggerAction('log', options);
+
+  displayNotification = options => this.props.app.triggerAction('display-notification', options);
+
+  render() {
 
     const {
-      cancelAll,
-      subscribe
-    } = createSubscriber(app);
+      app
+    } = this.props;
 
-    return (
-      <PluginParent
-        key={ name || index }
-        name={ name || index }
-        cancelSubscriptions={ cancelAll }
-        onError={ app.handleError }
-      >
-        <PluginComponent
-          { ...customProps }
-          triggerAction={ app.triggerAction }
-          subscribe={ subscribe }
-          log={ app.composeAction('log') }
-        />
-      </PluginParent>
-    );
-  });
+    const {
+      config,
+      pluginsAndSubscribers
+    } = this;
+
+    return pluginsAndSubscribers.map((pluginAndSubscriber, index) => {
+
+      const {
+        name,
+        plugin: PluginComponent,
+        subscriber
+      } = pluginAndSubscriber;
+
+      const {
+        cancelAll,
+        subscribe
+      } = subscriber;
+
+      log('render plug-in', name);
+
+      return (
+        <PluginParent
+          key={ name || index }
+          name={ name || index }
+          cancelSubscriptions={ cancelAll }
+          onError={ app.handleError }
+        >
+          <PluginComponent
+            triggerAction={ app.triggerAction }
+            config={ config }
+            subscribe={ subscribe }
+            log={ this.log }
+            displayNotification={ this.displayNotification }
+            _getGlobal={ app.getGlobal }
+          />
+        </PluginParent>
+      );
+    });
+  }
 }
 
 

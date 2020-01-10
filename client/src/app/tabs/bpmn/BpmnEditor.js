@@ -209,10 +209,13 @@ export class BpmnEditor extends CachedComponent {
   }
 
   async loadTemplates() {
+    const { getConfig } = this.props;
+
     const modeler = this.getModeler();
+
     const templatesLoader = modeler.get('elementTemplatesLoader');
 
-    const templates = await this.props.onLoadConfig('bpmn.elementTemplates');
+    const templates = await getConfig('bpmn.elementTemplates');
 
     templatesLoader.setTemplates(templates);
 
@@ -756,15 +759,6 @@ export class BpmnEditor extends CachedComponent {
           </Button>
         </Fill>
 
-        <Fill slot="toolbar" group="8_deploy">
-          <Button
-            onClick={ this.props.onModal.bind(null, 'DEPLOY_DIAGRAM') }
-            title="Deploy Current Diagram"
-          >
-            <Icon name="deploy" />
-          </Button>
-        </Fill>
-
         <div
           className="diagram"
           ref={ this.ref }
@@ -790,8 +784,19 @@ export class BpmnEditor extends CachedComponent {
 
     const {
       getPlugins,
+      onAction,
       onError
     } = props;
+
+    // notify interested parties that modeler will be configured
+    const handleMiddlewareExtensions = (middlewares) => {
+      onAction('emit-event', {
+        type: 'bpmn.modeler.configure',
+        payload: {
+          middlewares
+        }
+      });
+    };
 
     const {
       options,
@@ -800,8 +805,8 @@ export class BpmnEditor extends CachedComponent {
       exporter: {
         name,
         version
-      }
-    });
+      },
+    }, handleMiddlewareExtensions);
 
     if (warnings.length && isFunction(onError)) {
       onError(
@@ -819,6 +824,14 @@ export class BpmnEditor extends CachedComponent {
     const commandStack = modeler.get('commandStack');
 
     const stackIdx = commandStack._stackIdx;
+
+    // notify interested parties that modeler was created
+    onAction('emit-event', {
+      type: 'bpmn.modeler.created',
+      payload: {
+        modeler
+      }
+    });
 
     return {
       __destroy: () => {

@@ -17,7 +17,9 @@ import diagramOriginModule from 'diagram-js-origin';
 import alignToOriginModule from '@bpmn-io/align-to-origin';
 import addExporterModule from '@bpmn-io/add-exporter';
 
-import executableFixModule from './features/executable-fix';
+import executableFixModule from 'bpmn-js-executable-fix';
+
+import completeDirectEditingModule from './features/complete-direct-editing';
 import globalClipboardModule from './features/global-clipboard';
 import handToolOnSpaceModule from './features/hand-tool-on-space';
 import propertiesPanelKeyboardBindingsModule from './features/properties-panel-keyboard-bindings';
@@ -31,6 +33,8 @@ import camundaModdleExtension from 'camunda-bpmn-moddle/lib';
 
 import propertiesPanelModule from 'bpmn-js-properties-panel';
 import propertiesProviderModule from 'bpmn-js-properties-panel/lib/provider/camunda';
+
+import disableCollapsedSubprocessModule from 'bpmn-js-disable-collapsed-subprocess';
 
 
 import 'bpmn-js-properties-panel/styles/properties.less';
@@ -65,6 +69,7 @@ const defaultModules = BpmnModeler.prototype._modules;
 const extensionModules = [
   addExporterModule,
   camundaModdleExtension,
+  completeDirectEditingModule,
   executableFixModule,
   Flags.get(DISABLE_ADJUST_ORIGIN) ? diagramOriginModule : alignToOriginModule,
   globalClipboardModule,
@@ -73,7 +78,8 @@ const extensionModules = [
   propertiesPanelKeyboardBindingsModule,
   propertiesPanelModule,
   propertiesProviderModule,
-  signavioCompatModule
+  signavioCompatModule,
+  disableCollapsedSubprocessModule
 ];
 
 CamundaBpmnModeler.prototype._modules = [

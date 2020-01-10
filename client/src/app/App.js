@@ -16,6 +16,7 @@ import {
   assign,
   debounce,
   forEach,
+  isString,
   reduce
 } from 'min-dash';
 
@@ -40,7 +41,6 @@ import Log from './Log';
 
 
 import {
-  DeployDiagramModal,
   KeyboardShortcutsModal
 } from './modals';
 
@@ -62,6 +62,8 @@ import History from './History';
 import { PluginsRoot } from './plugins';
 
 import css from './App.less';
+
+import Notifications, { NOTIFICATION_TYPES } from './notifications';
 
 
 const log = debug('App');
@@ -86,6 +88,7 @@ const INITIAL_STATE = {
   tabs: [],
   tabState: {},
   logEntries: [],
+  notifications: [],
   currentModal: null,
   endpoints: []
 };
@@ -113,7 +116,7 @@ export class App extends PureComponent {
 
     this.tabRef = React.createRef();
 
-    const userPlugins = this.getPlugins('app.ui');
+    const userPlugins = this.getPlugins('client');
 
     this.plugins = [
       ...defaultPlugins,
@@ -136,6 +139,8 @@ export class App extends PureComponent {
       this.updateMenu = debounce(this.updateMenu, 50);
       this.resizeTab = debounce(this.resizeTab, 50);
     }
+
+    this.currentNotificationId = 0;
   }
 
   createDiagram = async (type = 'bpmn', options) => {
@@ -724,6 +729,14 @@ export class App extends PureComponent {
     this.events.off(event, listener);
   }
 
+  emitWithTab(type, tab, payload) {
+
+    this.emit(type, {
+      ...payload,
+      tab
+    });
+  }
+
   openTabLinksMenu = (tab, event) => {
     event.preventDefault();
 
@@ -893,6 +906,8 @@ export class App extends PureComponent {
       ...unsavedState
     });
 
+    this.emit('tab.saved', { tab });
+
     return tab;
   }
 
@@ -934,6 +949,14 @@ export class App extends PureComponent {
     if (typeof onReady === 'function') {
       onReady();
     }
+
+    this.on('app.activeTabChanged', () => {
+      this.closeNotifications();
+    });
+
+    this.on('tab.activeSheetChanged', () => {
+      this.closeNotifications();
+    });
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -957,7 +980,9 @@ export class App extends PureComponent {
         onTabChanged(activeTab, prevState.activeTab);
       }
 
-      this.emit('app.activeTabChanged', activeTab, prevState.activeTab);
+      this.emit('app.activeTabChanged', {
+        activeTab
+      });
     }
 
     if (tabLoadingState === 'shown' && prevState.tabLoadingState !== 'shown') {
@@ -1088,6 +1113,82 @@ export class App extends PureComponent {
     });
   }
 
+  /**
+   * Display notification.
+   *
+   * @param {Object} options
+   * @param {string} options.title
+   * @param {import('react').ReactNode} [options.content]
+   * @param {'info'|'success'|'error'|'warning'} [options.type='info']
+   * @param {number} [options.duration=4000]
+   *
+   * @returns {{ update: (options: object) => void, close: () => void }}
+   */
+  displayNotification({ type = 'info', title, content, duration = 4000 }) {
+    const { notifications } = this.state;
+
+    if (!NOTIFICATION_TYPES.includes(type)) {
+      throw new Error('Unknown notification type');
+    }
+
+    if (!isString(title)) {
+      throw new Error('Title should be string');
+    }
+
+    const id = this.currentNotificationId++;
+
+    const close = () => {
+      this._closeNotification(id);
+    };
+
+    const update = newProps => {
+      this._updateNotification(id, newProps);
+    };
+
+    const notification = {
+      content,
+      duration,
+      id,
+      close,
+      title,
+      type
+    };
+
+    this.setState({
+      notifications: [
+        ...notifications,
+        notification
+      ]
+    });
+
+    return {
+      close,
+      update
+    };
+  }
+
+  closeNotifications() {
+    this.setState({
+      notifications: []
+    });
+  }
+
+  _updateNotification(id, options) {
+    const notifications = this.state.notifications.map(notification => {
+      const { id: currentId } = notification;
+
+      return currentId !== id ? notification : { ...notification, ...options };
+    });
+
+    this.setState({ notifications });
+  }
+
+  _closeNotification(id) {
+    const notifications = this.state.notifications.filter(({ id: currentId }) => currentId !== id);
+
+    this.setState({ notifications });
+  }
+
   setLayout(layout) {
     this.setState({
       layout
@@ -1198,6 +1299,8 @@ export class App extends PureComponent {
   }
 
   async saveTab(tab, options) {
+
+    this.triggerAction('saveTab.start');
 
     // return early if no options provided, file not dirty and already saved
     if (!options && !this.isDirty(tab) && !this.isUnsaved(tab)) {
@@ -1468,6 +1571,10 @@ export class App extends PureComponent {
       return this.saveAllTabs();
     }
 
+    if (action === 'save-tab') {
+      return this.saveTab(options.tab);
+    }
+
     if (action === 'save') {
       return this.saveTab(activeTab);
     }
@@ -1550,6 +1657,19 @@ export class App extends PureComponent {
       return this.logEntry(message, category, action);
     }
 
+    if (action === 'display-notification') {
+      return this.displayNotification(options);
+    }
+
+    if (action === 'emit-event') {
+      const {
+        type,
+        payload
+      } = options;
+
+      return this.emitWithTab(type, activeTab, payload);
+    }
+
     const tab = this.tabRef.current;
 
     return tab.triggerAction(action, options);
@@ -1568,24 +1688,6 @@ export class App extends PureComponent {
 
   setModal = currentModal => this.setState({ currentModal });
 
-  setEndpoints = endpoints => this.setState({ endpoints });
-
-  handleDeploy = async (options) => {
-    await this.triggerAction('save');
-
-    const { file } = this.state.activeTab;
-
-    if (!file || !file.path) {
-      return false;
-    }
-
-    return this.getGlobal('backend').send('deploy', { ...options, file });
-  };
-
-  handleDeployError = (error) => {
-    this.logEntry(`Deploy error: ${JSON.stringify(error)}`, 'deploy-error');
-  }
-
   handleCloseTab = (tab) => {
     this.triggerAction('close-tab', { tabId: tab.id }).catch(console.error);
   }
@@ -1602,8 +1704,14 @@ export class App extends PureComponent {
     }
   }
 
-  loadConfig = (key, ...args) => {
-    return this.getGlobal('config').get(key, this.state.activeTab, ...args);
+  getConfig = (key, ...args) => {
+    const config = this.getGlobal('config');
+
+    const { activeTab } = this.state;
+
+    const { file } = activeTab;
+
+    return config.get(key, file, ...args);
   }
 
   getPlugins = type => {
@@ -1797,7 +1905,7 @@ export class App extends PureComponent {
                     onContextMenu={ this.openTabMenu }
                     onAction={ this.triggerAction }
                     onModal={ this.openModal }
-                    onLoadConfig={ this.loadConfig }
+                    getConfig={ this.getConfig }
                     getPlugins={ this.getPlugins }
                     ref={ this.tabRef }
                   />
@@ -1819,17 +1927,6 @@ export class App extends PureComponent {
 
           </SlotFillRoot>
 
-          { this.state.currentModal === 'DEPLOY_DIAGRAM' ?
-            <DeployDiagramModal
-              endpoints={ this.state.endpoints }
-              tab={ activeTab }
-              onClose={ this.closeModal }
-              onDeploy={ this.handleDeploy }
-              onDeployError={ this.handleDeployError }
-              onEndpointsUpdate={ this.setEndpoints }
-              onMenuUpdate={ this.updateMenu }
-            /> : null }
-
           { this.state.currentModal === 'KEYBOARD_SHORTCUTS' ?
             <KeyboardShortcutsModal
               getGlobal={ this.getGlobal }
@@ -1837,6 +1934,8 @@ export class App extends PureComponent {
             /> : null }
 
         </div>
+
+        <Notifications notifications={ this.state.notifications } />
 
       </DropZone>
     );
